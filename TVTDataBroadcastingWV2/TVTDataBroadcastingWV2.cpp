@@ -587,6 +587,8 @@ bool CDataBroadcastingWV2::Initialize()
     {
         webView2DataDirectory = path / L"WebView2Data";
     }
+    std::error_code ec;
+    std::filesystem::create_directories(webView2DataDirectory, ec);
     webView2Directory = path / L"WebView2";
     path.replace_extension(L".ini");
     this->iniFile = path;
