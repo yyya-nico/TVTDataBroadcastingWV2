@@ -12,6 +12,7 @@
 #include "InputDialog.h"
 #include "OneSeg.h"
 #include <shellapi.h>
+#include <shlobj_core.h>
 
 using namespace Microsoft::WRL;
 
@@ -576,7 +577,16 @@ bool CDataBroadcastingWV2::Initialize()
     path.replace_extension();
     baseDirectory = path;
     resourceDirectory = path / L"resources";
-    webView2DataDirectory = path / L"WebView2Data";
+    PWSTR localAppDataPath = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &localAppDataPath)))
+    {
+        webView2DataDirectory = std::filesystem::path(localAppDataPath) / L"TVTest" / L"TVTDataBroadcastingWV2" / L"WebView2Data";
+        CoTaskMemFree(localAppDataPath);
+    }
+    else
+    {
+        webView2DataDirectory = path / L"WebView2Data";
+    }
     webView2Directory = path / L"WebView2";
     path.replace_extension(L".ini");
     this->iniFile = path;
