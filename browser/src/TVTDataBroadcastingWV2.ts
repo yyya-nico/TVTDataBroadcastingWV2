@@ -1,7 +1,7 @@
-import { ComponentPMT, ResponseMessage } from "../web-bml/lib/ws_api";
-import { BMLBrowser, BMLBrowserFontFace, EPG, Indicator, IP, InputApplication, InputCancelReason, InputCharacterType } from "../web-bml/client/bml_browser";
-import { decodeTS } from "../web-bml/lib/decode_ts";
-import { CaptionPlayer } from "../web-bml/client/player/caption_player";
+import type { ComponentPMT, ResponseMessage } from "web-bml/protocol";
+import { BMLBrowser, BMLBrowserFontFace, EPG, Indicator, IP, InputApplication, InputCancelReason, InputCharacterType } from "web-bml";
+import { decodeTS } from "web-bml/ts";
+import { CaptionPlayer } from "./caption_player";
 
 declare global {
     interface Window {
@@ -456,8 +456,6 @@ const tsStream = decodeTS({
     parsePES: true,
 });
 
-tsStream.on("data", () => { });
-
 type ToWebViewMessage = {
     type: "stream",
     data: number[],
@@ -509,6 +507,14 @@ type ToWebViewMessage = {
 let remoteControlStatusTimeoutMillis = 60 * 1000;
 let remoteControlStatusTimeout = Number.MAX_VALUE;
 
+function fromBase64(input: string): Uint8Array<ArrayBuffer> {
+    if ("fromBase64" in globalThis.Uint8Array) {
+        return Uint8Array.fromBase64(input);
+    } else {
+        return Uint8Array.from(window.atob(input), c => c.charCodeAt(0));
+    }
+}
+
 function onWebViewMessage(data: ToWebViewMessage, reply: (data: FromWebViewMessage) => void) {
     if (!cProfile && data.type !== "key" && performance.now() >= remoteControlStatusTimeout) {
         remoteControlStatusContainer.style.visibility = "hidden";
@@ -520,7 +526,7 @@ function onWebViewMessage(data: ToWebViewMessage, reply: (data: FromWebViewMessa
         }
         const ts = data.data;
         const prevPCR = pcr;
-        tsStream.parse(Buffer.from(ts));
+        tsStream.push(Uint8Array.from(ts));
         const curPCR = pcr;
         if (prevPCR !== curPCR && curPCR != null) {
             player.updateTime(curPCR - 450);
@@ -531,7 +537,7 @@ function onWebViewMessage(data: ToWebViewMessage, reply: (data: FromWebViewMessa
         }
         const ts = data.data;
         const prevPCR = pcr;
-        tsStream.parse(Buffer.from(ts, "base64"));
+        tsStream.push(fromBase64(ts));
         const curPCR = pcr;
         if (prevPCR !== curPCR && curPCR != null) {
             player.updateTime(curPCR - 450);
